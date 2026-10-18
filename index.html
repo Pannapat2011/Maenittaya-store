@@ -317,7 +317,7 @@
                 <div class="shop-head">
                     <div>
                         <h2>สินค้าพร้อมส่งวันนี้</h2>
-                        <p id="shop-sub">ราคาต่อแพ็ค น้ำหนักต่อแพ็คตามไซส์ที่คัดไว้</p>
+                        <p id="shop-sub">ราคาต่อแพ็ค พร้อมน้ำหนักต่อแพ็ค (กก.)</p>
                     </div>
                 </div>
                 <div class="tools">
@@ -339,7 +339,7 @@
             <div class="wrap">
                 <h2>สั่งซื้อใน 3 ขั้นตอน</h2>
                 <div class="how-grid">
-                    <div><div class="no">1</div><h3>เลือกชนิดสินค้าและไซส์</h3><p>ใส่จำนวนแพ็คที่ต้องการลงตะกร้า ระบบเช็กสต๊อกจริงให้ทันที</p></div>
+                    <div><div class="no">1</div><h3>เลือกสินค้าที่ต้องการ</h3><p>ใส่จำนวนแพ็คที่ต้องการลงตะกร้า ระบบเช็กสต๊อกจริงให้ทันที</p></div>
                     <div><div class="no">2</div><h3>กรอกชื่อและเบอร์โทร</h3><p>เลือกรับเองที่ร้านหรือให้จัดส่ง แล้วกดส่งคำสั่งซื้อ</p></div>
                     <div><div class="no">3</div><h3>ทีมงานโทรยืนยัน</h3><p>คอนเฟิร์มยอด ค่าส่ง และนัดเวลารับหรือส่งสินค้ากับคุณ</p></div>
                 </div>
@@ -387,7 +387,7 @@
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const fmt = n => Math.round(Number(n) || 0).toLocaleString('th-TH');
     const baht = n => '฿' + (Number(n) || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
-    const kgTxt = kg => kg >= 1000 ? `${(kg / 1000).toLocaleString('th-TH', { maximumFractionDigits: 2 })} ตัน` : `${fmt(kg)} กก.`;
+    const kgTxt = kg => `${(Number(kg) || 0).toLocaleString('th-TH', { maximumFractionDigits: 1 })} กก.`;
     const LS_KEY = 'store_cart_' + SITE;
     const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
     const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
@@ -409,7 +409,7 @@
 
     /* ======================= ข้อมูลร้าน ======================= */
     let items = [], byId = {}, filter = 'all', loadedAt = 0;
-    const pick = {};       // ชนิดสินค้า → id ของไซส์ที่เลือก
+    const pick = {};       // ชนิดสินค้า → id ของขนาดแพ็ค (น้ำหนัก) ที่เลือก
     const want = {};       // ชนิดสินค้า → จำนวนที่จะใส่ตะกร้า
     let cart = [];
     try { cart = JSON.parse(lsGet(LS_KEY) || '[]').filter(x => x && x.id && x.qty > 0); } catch (e) { cart = []; }
@@ -463,7 +463,7 @@
             if (!g.image && it.image) g.image = it.image;
             g.best = g.best || it.best;
         });
-        out.forEach(g => g.sizes.sort((a, b) => (SIZE_ORDER.indexOf(a.size) + 1 || 99) - (SIZE_ORDER.indexOf(b.size) + 1 || 99)));
+        out.forEach(g => g.sizes.sort((a, b) => (parseFloat(a.weight) || 0) - (parseFloat(b.weight) || 0)));
         // ขายดีขึ้นก่อน แล้วตามด้วยที่มีของ
         out.sort((a, b) => (b.best - a.best) || (inStock(b) - inStock(a)));
         return out;
@@ -505,8 +505,8 @@
                 <div class="tags">${g.best ? '<span class="tag best">ขายดี</span>' : ''}<span class="tag">${esc(g.type)}</span></div></div>
             <div class="body">
                 <h3 class="vname">${esc(g.variety)}</h3>
-                <div class="vtype">${esc(g.type === 'แปรรูป' ? 'ผลิตภัณฑ์แปรรูป' : 'ปลาสลิด')} · ${g.sizes.length} ไซส์</div>
-                <div class="sizes" role="group" aria-label="เลือกไซส์">${g.sizes.map(s => `<button class="size" data-g="${esc(g.key)}" data-id="${esc(s.id)}" aria-pressed="${s.id === it.id}" ${s.level === 'out' ? 'disabled title="หมดชั่วคราว"' : ''}><b>${esc(s.size || '-')}</b><small>${s.weight ? esc(s.weight) + ' กก.' : '&nbsp;'}</small></button>`).join('')}</div>
+                <div class="vtype">${esc(g.type === 'แปรรูป' ? 'ผลิตภัณฑ์แปรรูป' : 'ปลาสลิด')} ${g.sizes.length > 1 ? ' · ' + g.sizes.length + ' ขนาด' : ''}</div>
+                ${g.sizes.length > 1 ? `<div class="sizes" role="group" aria-label="เลือกขนาดแพ็ค">${g.sizes.map(s => `<button class="size" data-g="${esc(g.key)}" data-id="${esc(s.id)}" aria-pressed="${s.id === it.id}" ${s.level === 'out' ? 'disabled title="หมดชั่วคราว"' : ''}><b>${s.weight ? esc(s.weight) + ' กก.' : '-'}</b><small>${s.lot ? esc(s.lot) : '&nbsp;'}</small></button>`).join('')}</div>` : `<div class="sizes"><span class="size" aria-pressed="true" style="cursor:default"><b>${it.weight ? esc(it.weight) + ' กก.' : '-'}</b><small>ต่อแพ็ค</small></span></div>`}
                 <div class="price-row">
                     <div>${it.price ? `<div class="price">${baht(it.price)}<small>/แพ็ค</small></div>${perKg ? `<div class="perkg">ประมาณ ${baht(perKg)} ต่อกิโลกรัม</div>` : ''}` : '<div class="price ask">สอบถามราคา</div><div class="perkg">ทีมงานแจ้งราคาตอนโทรยืนยัน</div>'}</div>
                     ${stock}
@@ -551,7 +551,7 @@
         const c = cart.find(x => x.id === it.id);
         if (c) c.qty += n; else cart.push({ id: it.id, qty: n });
         saveCart(); render();
-        toast(`เพิ่ม ${it.variety} ไซส์ ${it.size || '-'} × ${n} แพ็ค แล้ว`);
+        toast(`เพิ่ม ${it.variety}${it.weight ? ' ' + it.weight + ' กก.' : ''} × ${n} แพ็ค แล้ว`);
         [$('cart-btn'), $('fab')].forEach(b => { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); });
     }
     /** ตรวจตะกร้ากับสต๊อกล่าสุด — ลดจำนวนถ้าของเหลือน้อยลง ลบรายการที่ไม่มีแล้ว */
@@ -613,7 +613,7 @@
             return;
         }
         if (!cart.length) {
-            body.innerHTML = `<div class="empty-cart"><svg viewBox="0 0 200 110"><use href="#slice"/></svg><b>ตะกร้ายังว่างอยู่</b>เลือกชนิดสินค้าและไซส์ที่ชอบ แล้วกด "ใส่ตะกร้า"</div>`;
+            body.innerHTML = `<div class="empty-cart"><svg viewBox="0 0 200 110"><use href="#slice"/></svg><b>ตะกร้ายังว่างอยู่</b>เลือกสินค้าที่ชอบ แล้วกด "ใส่ตะกร้า"</div>`;
             foot.innerHTML = `<button class="btn btn-flesh" onclick="closeCart(); location.hash='shop'">เลือกซื้อปลาสลิด</button>`;
             return;
         }
@@ -622,7 +622,7 @@
             const it = byId[c.id]; if (!it) return '';
             const max = typeof it.qty === 'number' ? it.qty : 9999;
             return `<div class="line">${lineThumb(it)}
-                <div><div class="nm">${esc(it.variety)} · ไซส์ ${esc(it.size || '-')}</div>
+                <div><div class="nm">${esc(it.variety)}${it.weight ? ' · ' + esc(it.weight) + ' กก.' : ''}</div>
                     <div class="sub">${it.weight ? esc(it.weight) + ' กก./แพ็ค · ' : ''}${it.price ? baht(it.price) + '/แพ็ค' : 'สอบถามราคา'}</div>
                     <div class="step"><button data-cdec="${esc(c.id)}" aria-label="ลด" ${c.qty <= 1 ? 'disabled' : ''}>−</button><input type="number" inputmode="numeric" value="${c.qty}" data-cqty="${esc(c.id)}" aria-label="จำนวน"><button data-cinc="${esc(c.id)}" aria-label="เพิ่ม" ${c.qty >= max ? 'disabled' : ''}>+</button></div></div>
                 <div class="amt">${it.price ? baht(it.price * c.qty) : '—'}<button class="rm" data-rm="${esc(c.id)}">ลบ</button></div></div>`;
